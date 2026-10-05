@@ -19,6 +19,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const HELPER_VERSION = "0.0.1";
 const TOOLBAR_HEIGHT = 52;
 const SELECTION_WORLD_ID = 17041;
+const SMOKE_MODE = process.argv.includes("--smoke");
 
 let mainWindow = null;
 let toolbarView = null;
@@ -234,7 +235,12 @@ function createWindow() {
   toolbarView.webContents.loadFile(
     path.join(__dirname, "..", "ui", "toolbar.html")
   );
-  pageView.webContents.loadURL("about:blank");
+  if (SMOKE_MODE) {
+    toolbarView.webContents.once("did-finish-load", () => {
+      console.log("MOTION_BROWSER_HELPER_SMOKE_OK");
+      setTimeout(() => app.quit(), 100);
+    });
+  }
 
   mainWindow.on("closed", () => {
     toolbarView?.webContents.close();
