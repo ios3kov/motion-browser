@@ -4,182 +4,152 @@ Status: adopted direction, implementation in progress
 Date: 2026-10-05  
 Decision source: user explicitly chose browser helper architecture.  
 Standard: AE Development Rules v8.0.0  
-Risk Profile: Critical — browser security + local IPC + external content + future packaging.
+Risk Profile: Critical — browser security + cross-process IPC + external content + future packaging.
 
-## 1. Architecture decision
+## Components
 
-Motion Browser will use two cooperating components:
-
-### A. After Effects plugin
-Primary responsibilities:
+### After Effects UXP plugin
+Responsibilities:
 - AE panel/workflow;
-- connect to the local helper;
-- receive validated selection payloads;
+- create helper session/mailbox;
+- launch/focus Browser Helper through the registered `motionbrowser://` scheme;
+- consume validated helper events;
 - persist/import media;
 - create AE layers/keyframes;
-- show progress/errors/recovery state.
+- expose progress/errors/recovery.
 
-Target runtime: UXP when the required After Effects host runtime is available and verified.
+Exact host/minimum version is verified when the AE bridge is implemented.
 
-### B. Browser Helper
-Primary responsibilities:
-- own the browsing session;
-- render arbitrary websites in Chromium;
-- inspect DOM, CSS and supported animation state;
+### Browser Helper
+Technology baseline: Electron 44.5.1 / Chromium.
+
+Responsibilities:
+- own browsing session;
+- render arbitrary sites;
+- inspect DOM/CSS and supported animation state;
 - provide element-selection UX;
-- download/capture assets when allowed;
-- normalize selected content into the Motion Browser protocol;
-- never expose native/Node capability to loaded remote pages.
+- normalize selected content;
+- write session-bound events for AE;
+- never expose Node/native privileges to loaded sites.
 
-Initial implementation technology: Electron/Chromium.
-
-## 2. Why helper-first
-
-The product requires inspection of arbitrary third-party pages.
-
-Electron exposes controlled page execution through `webContents.executeJavaScript` and `executeJavaScriptInIsolatedWorld`, while its security model allows remote content to run with Node integration disabled, context isolation enabled and sandboxing enabled.
-
-This makes the browser capability a component we control instead of depending on an unproven AE WebView injection capability.
-
-## 3. Trust boundaries
+## Trust boundary
 
 ```
-Remote website (untrusted)
-        |
-        v
-Sandboxed Chromium webContents
-        |
-        | isolated extraction code
-        v
+Untrusted website
+   ↓
+Sandboxed Chromium WebContentsView
+   ↓ fixed isolated selector
 Browser Helper main process
-        |
-        | validated Motion Browser protocol
-        | authenticated local IPC
-        v
-AE UXP plugin
-        |
-        | validated host mutation
-        v
+   ↓ versioned mailbox event
+UXP plugin-data session
+   ↓ validated AE adapter
 After Effects project
 ```
 
-Remote web content is always untrusted.
-
-It must never receive:
+Remote pages must never receive:
 - Node integration;
-- filesystem APIs;
-- process APIs;
-- helper IPC credentials;
-- AE mutation APIs;
-- arbitrary local IPC access.
+- filesystem/process APIs;
+- toolbar preload bridge;
+- mailbox/session paths or tokens;
+- AE mutation APIs.
 
-## 4. Browser security baseline
+## Browser security baseline
 
-Every remote browsing surface MUST use:
-- `nodeIntegration: false`;
-- `contextIsolation: true`;
-- `sandbox: true`;
-- no dangerous generic preload bridge exposed to page JS;
-- denied/controlled `window.open`;
-- explicit navigation policy;
-- explicit permission-request policy;
-- external protocol allowlist;
-- isolated-world extraction where practical.
+Remote WebContentsView:
+- `nodeIntegration: false`
+- `contextIsolation: true`
+- `sandbox: true`
+- `webSecurity: true`
+- `allowRunningInsecureContent: false`
+- no remote preload bridge
+- automatic permission requests denied
+- automatic downloads denied in M1
+- only `http:` / `https:` top-level navigation
+- `window.open` denied and safe URLs redirected into the same controlled view
+- fixed selector code executes in an isolated world
 
-No website-supplied string is executed as privileged code.
+Electron recommends keeping remote content isolated from Node and privileged APIs.
 
-## 5. Extraction model
+## Selection model
 
-The helper injects our own fixed extraction/selection code into an isolated world.
-
-Supported v1 normalized types:
+M1:
 - text;
 - image;
+- observed text style metadata for future mapping.
+
+Later:
 - SVG;
-- video;
-- audio;
-- color;
-- simple gradient;
+- video/audio;
+- color/gradient;
 - Lottie;
-- reference capture.
+- reference capture;
+- supported animation descriptors.
 
-Animation conversion uses capability classification:
-- editable-supported;
-- capture-fallback;
-- unsupported.
+Selectors are fixed application code. Site-provided strings are never evaluated as privileged code.
 
-The helper reports what it can prove. It does not claim editability for unknown animation mechanisms.
+## AE ↔ Helper IPC
 
-## 6. Local IPC
+Primary design: filesystem mailbox, not localhost networking.
 
-Direction:
-- helper hosts the local service;
-- UXP is a client;
-- persistent WebSocket is preferred for events/selections;
-- request/response messages carry an operation/correlation ID.
+### Launch
+1. UXP gets its persistent `plugin-data` native path.
+2. UXP creates `sessions/<sessionId>/session.json` containing protocol version and random session token.
+3. UXP calls `openExternal("motionbrowser://connect?...")`.
+4. Registered helper opens/focuses and receives only mailbox path + session ID.
+5. Helper reads the session file and writes `helper-ready.json`.
 
-Security requirements:
-- bind to loopback only;
-- random per-session authentication token;
-- protocol version handshake;
-- helper process/session identity;
-- reject unauthenticated clients;
-- message schema validation;
-- maximum message sizes;
-- timeout/cancellation;
-- explicit outcome states for mutating requests;
-- no listening on LAN interfaces.
+### Events
+Helper writes atomic JSON envelopes under:
+`sessions/<sessionId>/events/`
 
-The final transport details remain implementation-tested because UXP host behavior must be verified in After Effects.
+Each envelope contains:
+- protocolVersion;
+- eventId;
+- sessionId;
+- sessionToken;
+- event type;
+- timestamp;
+- payload.
 
-## 7. Data ownership
+Writes use temp-file + rename so AE never consumes a partial JSON file.
 
-Helper may download/capture temporary source data.
+### Why not localhost WebSocket first
+UXP supports network APIs, but macOS imposes extra restrictions on insecure HTTP and self-signed secure WebSockets. The mailbox design needs only plugin sandbox storage plus a registered custom URL scheme, reducing permissions and certificate complexity.
 
-Before AE project mutation:
-- asset identity and source URL are known;
-- persistent destination strategy is selected;
-- partial downloads are not treated as complete assets;
-- temp storage is not the only copy of user-required media.
+The mailbox session token is a session-binding control, not protection against an already-compromised process running as the same OS user. Release security review must preserve this threat-model boundary or adopt stronger OS-backed IPC if needed.
 
-## 8. Failure model
+## Failure model
 
-Each operation has:
+Per operation:
 - operationId;
-- state;
+- explicit state;
 - per-item result;
-- explicit failure;
-- cancellation state;
-- unknown-outcome state where applicable.
+- cancellation;
+- partial failure;
+- outcome-unknown state for AE mutations when acknowledgement is lost.
 
-Batch processing must not hide partial failure.
+Do not automatically retry an AE mutation whose outcome is unknown.
 
-A dropped IPC response after an AE mutation does not automatically mean the mutation failed. Reconciliation is required before retry.
-
-## 9. Initial milestones
+## Milestones
 
 ### M1 — Helper core
 - secure Chromium window;
-- controlled page navigation;
-- isolated selection injection;
+- address navigation;
+- element selection;
 - text/image extraction;
-- normalized payload;
-- local protocol tests.
+- shared protocol;
+- mailbox session;
+- helper core/security tests.
 
-### M2 — Helper IPC
-- loopback authenticated WebSocket;
-- handshake/versioning;
-- reconnect and timeout semantics;
-- malformed/unauthorized request tests.
-
-### M3 — AE bridge
-- UXP client;
-- helper discovery/start/connect;
+### M2 — AE bridge
+- create plugin-data session;
+- launch/focus helper;
+- consume events;
 - text → Text Layer;
-- image → persistent file + import;
-- Undo/recovery contract.
+- image → persistent asset + import;
+- Undo/recovery.
 
-### M4 — v1 format expansion
+### M3 — v1 formats
 - SVG;
 - video/audio;
 - colors/gradients;
@@ -187,16 +157,23 @@ A dropped IPC response after an AE mutation does not automatically mean the muta
 - Lottie;
 - batch UX.
 
-### M5 — supported animation mapping
+### M4 — animation mapping
 - capability detector;
-- simple animation → keyframes;
-- capture fallback;
+- supported simple motion → keyframes;
+- fallback capture;
 - explicit unsupported state.
 
-## 10. Architecture gate
+### M5 — validation/release hardening
+- helper packaging;
+- process lifecycle/recovery;
+- permission UX;
+- signing/distribution per target OS/channel;
+- full security/regression gates.
 
-This architecture is adopted.
+## Sources
 
-The remaining runtime question is no longer whether the helper is needed. It is only the exact verified AE UXP integration contract and supported host versions.
-
-No CEP dependency is introduced as the primary architecture.
+- Electron security: https://www.electronjs.org/docs/latest/tutorial/security
+- Electron WebContentsView/BaseWindow: https://www.electronjs.org/docs/latest/api/base-window
+- Electron webContents isolated execution: https://www.electronjs.org/docs/latest/api/web-contents/
+- Adobe UXP filesystem: https://developer.adobe.com/uxp/guides/how-to/recipes/filesystem-operations/
+- Adobe UXP external process/custom scheme: https://developer.adobe.com/uxp/guides/how-to/recipes/external-process/
