@@ -1,24 +1,28 @@
-name: TECH-001 protocol
+name: Motion Browser checks
 
 on:
   push:
     paths:
       - "spikes/tech-001/**"
+      - "packages/protocol/**"
+      - "apps/helper/**"
       - ".github/workflows/tech-001.yml"
   pull_request:
     paths:
       - "spikes/tech-001/**"
+      - "packages/protocol/**"
+      - "apps/helper/**"
       - ".github/workflows/tech-001.yml"
 
 jobs:
-  protocol-tests:
+  core-tests:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: spikes/tech-001
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
-      - run: npm test
+          node-version: "24"
+      - name: TECH-001 protocol tests
+        run: node --test spikes/tech-001/tests/*.test.mjs
+      - name: Browser helper core and security tests
+        run: node --test apps/helper/tests/*.test.mjs
