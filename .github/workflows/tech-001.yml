@@ -1,0 +1,24 @@
+name: TECH-001 protocol
+
+on:
+  push:
+    paths:
+      - "spikes/tech-001/**"
+      - ".github/workflows/tech-001.yml"
+  pull_request:
+    paths:
+      - "spikes/tech-001/**"
+      - ".github/workflows/tech-001.yml"
+
+jobs:
+  protocol-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: spikes/tech-001
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm test
