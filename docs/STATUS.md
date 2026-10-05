@@ -23,28 +23,46 @@ Build Motion Browser: a web-to-After-Effects workflow where the user finds an as
 ## Current observed state
 
 - Repository initialized.
-- Product discovery/vision being recorded.
-- Implementation has not started.
+- Initial Product Discovery / Vision recorded.
+- Requirement traceability recorded.
+- Official-source UXP/WebView feasibility research completed.
+- No production architecture selected yet.
 - No AE runtime artifact exists yet.
-- Runtime browser capability: Evidence UNVERIFIED.
-- Test Status: NOT RUN — no implementation candidate yet.
+- Pure UXP arbitrary-site DOM extraction: Evidence UNVERIFIED.
+- Test Status: NOT RUN — no compatible runtime candidate has been executed yet.
+
+## Current findings
+
+- After Effects UXP documentation is available and current host API members declare Min Version 27.0.
+- Adobe's current roadmap says After Effects UXP public beta is planned by November 2026.
+- UXP WebView officially supports URL loading and postMessage.
+- The documented WebView API does not expose a general executeScript/contentScript API for injecting extraction logic into arbitrary third-party pages.
+- A controlled page we own can be used for the first end-to-end spike; that does not prove arbitrary-site support.
+
+Detailed record: docs/TECH-001-BROWSER-FEASIBILITY.md
 
 ## Current block
 
-1. Establish product contract.
-2. Research official AE/UXP browser and host API capabilities.
-3. Build isolated technical spike for page navigation → element/asset selection → data transfer → AE mutation.
-4. Only after the spike, choose production architecture and write Product Spec / Technical Design / Production Plan.
+1. Product contract — completed for known scope.
+2. Official UXP/WebView research — completed.
+3. Runtime TECH-001 spike — next.
+4. Production architecture + Product Spec + Technical Design + Production Plan — blocked on TECH-001 evidence.
 
 ## Blockers
 
 | Blocker | Impact | Unblocking condition | Independent work |
 | --- | --- | --- | --- |
-| UXP/WebView inspection capability unknown | Final architecture | Official API evidence + AE runtime spike | Product contract, extraction model, test cases |
+| Compatible AE UXP runtime not yet verified in the development environment | Runtime TECH-001 | Run the spike in an AE build that supports the documented UXP API | Build controlled spike source/test page |
+| Arbitrary-page inspection capability unproven | Final architecture | Runtime evidence or explicit supported API | Extraction schema/test cases |
 | Minimum AE/OS matrix not chosen | Compatibility contract | Architecture evidence first, then choose supported baseline | Research |
 
 ## Next action
 
-Create and execute TECH-001: prove the smallest end-to-end path from web content selection to an AE-side result without relying on undocumented browser behavior.
+Prepare the TECH-001 controlled proof source:
+- UXP panel/WebView shell;
+- controlled local/test page;
+- image + text selection payload;
+- AE-side mutation path using only documented host APIs;
+- structured logs and test instructions.
 
-Stop criterion for the spike: either a reproducible supported path is proven, or a specific unsupported boundary is identified and a companion/helper architecture becomes the next candidate.
+Stop criterion for this block: source is reproducible and statically validated. Runtime Test Status remains NOT RUN until it is executed in a compatible After Effects UXP build.
