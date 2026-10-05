@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Motion Browser TECH-001</title>
+  <style>
+    body { font: 14px system-ui, sans-serif; margin: 24px; max-width: 720px; }
+    [data-motion-browser-selectable] { cursor: pointer; outline: 1px solid transparent; padding: 8px; }
+    [data-motion-browser-selectable].selected { outline: 2px solid currentColor; }
+    img { width: 180px; height: 120px; object-fit: cover; display: block; }
+    .controls { margin-top: 20px; display: flex; gap: 12px; align-items: center; }
+  </style>
+</head>
+<body>
+  <h1>Motion Browser TECH-001</h1>
+  <p>Controlled page used only to prove the extraction payload contract.</p>
+
+  <p id="sample-text" data-motion-browser-selectable>
+    Motion Browser should send this sentence to After Effects as editable text.
+  </p>
+
+  <img
+    id="sample-image"
+    data-motion-browser-selectable
+    alt="Motion Browser test image"
+    src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='240'%3E%3Crect width='360' height='240' fill='%23ddd'/%3E%3Ctext x='180' y='125' text-anchor='middle' font-family='Arial' font-size='24'%3EMotion Browser%3C/text%3E%3C/svg%3E"
+  />
+
+  <div class="controls">
+    <button id="send" disabled>Send selection</button>
+    <span id="status">0 selected</span>
+  </div>
+
+  <script type="module" src="./test-page.js"></script>
+</body>
+</html>

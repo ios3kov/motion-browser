@@ -1,0 +1,44 @@
+name: Motion Browser checks
+
+on:
+  push:
+    paths:
+      - "spikes/tech-001/**"
+      - "packages/protocol/**"
+      - "apps/helper/**"
+      - ".github/workflows/tech-001.yml"
+  pull_request:
+    paths:
+      - "spikes/tech-001/**"
+      - "packages/protocol/**"
+      - "apps/helper/**"
+      - ".github/workflows/tech-001.yml"
+
+jobs:
+  core-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: TECH-001 protocol tests
+        run: node --test spikes/tech-001/tests/*.test.mjs
+      - name: Browser helper core and security tests
+        run: node --test apps/helper/tests/*.test.mjs
+
+  helper-electron-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: apps/helper
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install pinned Electron
+        run: npm install --no-audit --no-fund
+      - name: Launch helper under Xvfb
+        run: xvfb-run -a npm start -- --smoke
