@@ -1,10 +1,10 @@
 # Motion Browser — Product Discovery / Vision
 
-Status: Stage 0 in progress  
+Status: Stage 0 complete for product scope  
 Date: 2026-10-05  
 Standard: AE Development Rules v8.0.0
 
-## 1. Product
+## Product
 
 Motion Browser is an After Effects tool for finding media and web motion on sites and sending selected content directly into an AE project with the highest practical level of editability.
 
@@ -18,10 +18,11 @@ Problem: today the user must manually download, convert, rename, import and ofte
 
 Desired outcome: reduce that workflow to one selection and one send action.
 
-## 2. Confirmed requirements
+## Confirmed requirements
 
 ### Core
-- Built-in browsing workflow connected to After Effects.
+- Browser workflow connected to After Effects.
+- Browser Helper is a first-class component of the architecture.
 - Import images, SVG, GIF, video and audio.
 - Text → editable AE Text Layer.
 - Colors and palettes → reusable AE-side result.
@@ -40,41 +41,42 @@ Desired outcome: reduce that workflow to one selection and one send action.
 - Smarter extraction/grouping of multi-element designs.
 - Additional capture/export modes.
 
-## 3. Non-goals for v1
+## Non-goals for v1
 
 - Rebuild arbitrary websites as fully editable AE compositions.
 - Guarantee editable conversion of arbitrary JavaScript/WebGL/canvas animation.
 - Execute arbitrary site code inside the AE project.
 - Circumvent DRM, access controls, authentication restrictions or site permissions.
-- Depend on deprecated CEP as the long-term architecture unless a bounded compatibility bridge is explicitly justified.
+- Use CEP as the primary long-term architecture.
 
-## 4. Core user flows
+## Core user flows
 
-### Flow A — media
-1. User opens Motion Browser.
-2. Opens a page.
-3. Selects one or more media assets.
+### Media
+1. User opens Motion Browser from the AE workflow.
+2. Browser Helper opens the requested site.
+3. User selects one or more media assets.
 4. Clicks Send to AE.
 5. Assets are persisted locally, imported and placed in the active project/composition according to the selected mode.
 
-### Flow B — editable web content
+### Editable web content
 1. User selects text, color, gradient, Lottie or a supported simple animation.
-2. Motion Browser classifies the content.
-3. The tool shows the resulting AE representation before/while sending when ambiguity matters.
+2. Browser Helper classifies the content.
+3. Motion Browser shows/records the resulting AE representation when ambiguity matters.
 4. Send to AE creates editable layers/keyframes where the conversion contract is supported.
-5. If editability is unsupported, the product offers a media capture fallback instead of pretending parity.
+5. Unsupported editability uses an explicit media capture fallback.
 
-### Flow C — reference capture
+### Reference capture
 1. User selects a page region or video frame.
 2. Captures it as a reference.
 3. Motion Browser stores the image plus source URL and optional note.
-4. The reference becomes available in the AE project/workflow.
+4. The reference becomes available in the AE workflow.
 
-## 5. Product scope
+## Product scope
 
 ### Core
 - Browser/navigation surface.
 - Element/asset selection.
+- Browser Helper lifecycle.
 - Media import.
 - Text/colors/simple gradients.
 - Lottie import.
@@ -88,13 +90,14 @@ Desired outcome: reduce that workflow to one selection and one send action.
 - Progress/error/cancel states.
 - Duplicate handling.
 - Source metadata.
+- Secure separation between untrusted websites and native/helper privileges.
 
 ### Later
 - Advanced CSS/motion reconstruction.
 - Multi-element layout reconstruction.
 - Smart style mapping.
 
-## 6. Success criteria
+## Success criteria
 
 - A supported image, video, audio or SVG can go from page selection to AE without manual save/import steps.
 - Text arrives as editable text, not a rasterized image.
@@ -104,32 +107,29 @@ Desired outcome: reduce that workflow to one selection and one send action.
 - Imported assets remain valid after restarting AE because persistent source files are retained.
 - A reference capture preserves its source URL.
 - Failure of one asset in a batch does not corrupt the project or hide the remaining results.
+- Remote websites never receive Node/native/helper/AE privileges.
 
-## 7. Material constraints / open questions
+## Constraints / resolved decisions
 
-### Blocking technical question
-Can the current After Effects UXP runtime provide the required browser/WebView inspection and communication needed to select and extract arbitrary page content, or is a companion/helper browser required?
+- Browser Helper: confirmed by user on 2026-10-05.
+- Initial helper technology: Electron/Chromium.
+- Initial Electron development baseline: stable 44.5.1.
+- Remote web content is untrusted and sandboxed.
+- Primary IPC candidate: UXP plugin-data mailbox + custom `motionbrowser://` launch scheme, avoiding localhost network IPC.
+- Exact minimum AE/UXP version remains a compatibility contract for the AE adapter and does not block helper development.
+- Final distribution/signing channel remains a release-stage decision.
 
-This must be resolved by official API research plus an isolated runtime spike before production Technical Design.
-
-### Other open constraints
-- Exact minimum AE version: not chosen yet.
-- macOS/Windows support matrix: not chosen yet.
-- Final distribution channel: not chosen yet.
-- Whether a native/helper component is necessary: depends on the browser capability spike.
-
-These are not product-scope questions, but they block final architecture/compatibility decisions.
-
-## 8. Stage 0 exit check
+## Stage 0 exit check
 
 - [x] Primary user is clear
 - [x] Problem is clear
 - [x] Desired outcome is clear
-- [x] Main user flows are clear
+- [x] Main user flow is clear
 - [x] Core scope is clear
 - [x] Non-goals are explicit
-- [ ] Material runtime/compatibility constraints are resolved
-- [ ] Blocking browser/WebView capability question is resolved with evidence
+- [x] Material product constraints are known
+- [x] Browser/helper architecture decision is resolved
 - [x] Success criteria are observable
+- [x] Remaining compatibility questions do not block Product Spec or helper implementation
 
-Stage 0 remains open only for the technical feasibility constraint above. Independent product documentation and research may continue.
+Next: Product Spec → Technical Design → Production Plan → implementation.
