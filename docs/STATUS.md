@@ -11,6 +11,7 @@ Build Motion Browser: a web-to-After-Effects workflow where the user finds an as
 - Delivery Gate: Development
 - Current Risk Profile: Standard for research/design. Escalate if helper/native IPC, security-sensitive browser integration or destructive file behavior enters implementation.
 - Current branch: feat/initial-product-contract
+- Tracking: issue #1, draft PR #2
 
 ## Confirmed boundaries
 
@@ -26,10 +27,13 @@ Build Motion Browser: a web-to-After-Effects workflow where the user finds an as
 - Initial Product Discovery / Vision recorded.
 - Requirement traceability recorded.
 - Official-source UXP/WebView feasibility research completed.
+- TECH-001 extraction payload protocol implemented.
+- Controlled text/image WebView test page implemented.
+- Dependency-free automated protocol tests added.
+- GitHub Actions workflow added; current run is queued, therefore Test Status is NOT RUN until it actually completes.
 - No production architecture selected yet.
 - No AE runtime artifact exists yet.
 - Pure UXP arbitrary-site DOM extraction: Evidence UNVERIFIED.
-- Test Status: NOT RUN — no compatible runtime candidate has been executed yet.
 
 ## Current findings
 
@@ -37,32 +41,45 @@ Build Motion Browser: a web-to-After-Effects workflow where the user finds an as
 - Adobe's current roadmap says After Effects UXP public beta is planned by November 2026.
 - UXP WebView officially supports URL loading and postMessage.
 - The documented WebView API does not expose a general executeScript/contentScript API for injecting extraction logic into arbitrary third-party pages.
-- A controlled page we own can be used for the first end-to-end spike; that does not prove arbitrary-site support.
+- A controlled page we own can use the bridge; that does not prove arbitrary-site support.
 
 Detailed record: docs/TECH-001-BROWSER-FEASIBILITY.md
 
-## Current block
+## Completed block
 
-1. Product contract — completed for known scope.
-2. Official UXP/WebView research — completed.
-3. Runtime TECH-001 spike — next.
-4. Production architecture + Product Spec + Technical Design + Production Plan — blocked on TECH-001 evidence.
+TECH-001 independent protocol slice:
+- schema v1 for text/image selections;
+- batch-ready payload;
+- validation and normalization;
+- controlled selection page;
+- CI test definition.
+
+Candidate HEAD for this block: c7e804f04574fedad2185a8ad91a56092c90fd26
 
 ## Blockers
 
 | Blocker | Impact | Unblocking condition | Independent work |
 | --- | --- | --- | --- |
-| Compatible AE UXP runtime not yet verified in the development environment | Runtime TECH-001 | Run the spike in an AE build that supports the documented UXP API | Build controlled spike source/test page |
-| Arbitrary-page inspection capability unproven | Final architecture | Runtime evidence or explicit supported API | Extraction schema/test cases |
+| Compatible AE UXP runtime not yet verified in the development environment | AE runtime TECH-001 | Execute the spike in a compatible After Effects UXP build | Protocol/extraction work |
+| Arbitrary-page inspection capability unproven | Final architecture | Runtime evidence or explicit supported API | Helper architecture research |
+| Authoritative AE UXP host manifest contract/sample is not yet established in project Evidence | Runnable package | Official Adobe sample/docs or verified runtime manifest | Keep spike host-neutral |
 | Minimum AE/OS matrix not chosen | Compatibility contract | Architecture evidence first, then choose supported baseline | Research |
+
+## Test / Evidence
+
+- Protocol source: implemented.
+- Automated test definitions: implemented.
+- GitHub Actions: queued at time of this checkpoint.
+- Protocol Test Status: NOT RUN.
+- AE runtime Test Status: NOT RUN.
+- Compatibility Status: UNKNOWN for AE UXP runtime.
+- Evidence Confidence for arbitrary-page extraction: UNVERIFIED.
 
 ## Next action
 
-Prepare the TECH-001 controlled proof source:
-- UXP panel/WebView shell;
-- controlled local/test page;
-- image + text selection payload;
-- AE-side mutation path using only documented host APIs;
-- structured logs and test instructions.
+1. Record CI result once an actual run result exists.
+2. Research the companion/helper browser path in parallel because arbitrary-page DOM instrumentation is the main architecture risk.
+3. Build the AE UXP bridge only from an authoritative/verified host manifest and API contract.
+4. Run the controlled test in compatible AE UXP, then the unrelated-page boundary test.
 
-Stop criterion for this block: source is reproducible and statically validated. Runtime Test Status remains NOT RUN until it is executed in a compatible After Effects UXP build.
+Stop criterion for TECH-001: either a supported pure-UXP path is proven for the required workflow, or the exact unsupported boundary is demonstrated and the helper architecture becomes the production candidate.
