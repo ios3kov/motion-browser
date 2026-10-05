@@ -26,3 +26,19 @@ jobs:
         run: node --test spikes/tech-001/tests/*.test.mjs
       - name: Browser helper core and security tests
         run: node --test apps/helper/tests/*.test.mjs
+
+  helper-electron-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: apps/helper
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install pinned Electron
+        run: npm install --no-audit --no-fund
+      - name: Launch helper under Xvfb
+        run: xvfb-run -a npm start -- --smoke
